@@ -1,0 +1,9 @@
+# Robots.txt
+
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /api
+
+Sitemap: https://adopsihewan.com/sitemap.xml

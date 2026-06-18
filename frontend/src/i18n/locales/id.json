@@ -1,0 +1,28 @@
+{
+  "nav": {
+    "home": "Beranda",
+    "animals": "Hewan",
+    "shelters": "Shelter",
+    "articles": "Artikel"
+  },
+  "auth": {
+    "login": "Masuk",
+    "register": "Daftar",
+    "logout": "Keluar"
+  },
+  "dashboard": {
+    "title": "Dashboard"
+  },
+  "favorites": {
+    "title": "Favorit"
+  },
+  "common": {
+    "loading": "Memuat...",
+    "error": "Terjadi kesalahan",
+    "success": "Berhasil",
+    "save": "Simpan",
+    "cancel": "Batal",
+    "delete": "Hapus",
+    "edit": "Edit"
+  }
+}
