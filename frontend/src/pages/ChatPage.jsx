@@ -314,7 +314,7 @@ export default function ChatPage() {
       <div className="flex-1 flex max-w-7xl mx-auto w-full min-h-0">
         
         {/* Chat List */}
-        <div className="w-80 border-r border-gray-200 dark:border-dark-700 bg-white dark:bg-dark-800 flex flex-col min-h-0">
+        <div className={`w-full md:w-80 border-r border-gray-200 dark:border-dark-700 bg-white dark:bg-dark-800 flex-col min-h-0 ${selectedRoom ? 'hidden md:flex' : 'flex'}`}>
           <div className="p-4 border-b border-gray-200 dark:border-dark-700 shrink-0">
             <h2 className="text-xl font-bold text-gray-800 dark:text-white">💬 Chat</h2>
             <p className="text-xs text-gray-500">Percakapan Anda</p>
@@ -363,7 +363,7 @@ export default function ChatPage() {
         </div>
 
         {/* Chat Messages */}
-        <div className="flex-1 flex flex-col bg-gray-50 dark:bg-dark-900 relative min-h-0">
+        <div className={`flex-1 flex-col bg-gray-50 dark:bg-dark-900 relative min-h-0 ${selectedRoom ? 'flex' : 'hidden md:flex'}`}>
           {!selectedRoom ? (
             <div className="flex-1 flex items-center justify-center text-gray-400">
               Pilih percakapan untuk mulai mengirim pesan
@@ -372,6 +372,12 @@ export default function ChatPage() {
             <>
               {/* Chat Header */}
               <div className="p-4 bg-white dark:bg-dark-800 border-b border-gray-200 dark:border-dark-700 flex items-center gap-3 shrink-0 z-10 shadow-sm">
+                <button 
+                  onClick={() => setSelectedRoom(null)}
+                  className="md:hidden p-2 -ml-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-full"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path></svg>
+                </button>
                 {selectedRoom.partnerAvatar.length > 2 ? (
                   <img src={selectedRoom.partnerAvatar} alt="avatar" className="w-10 h-10 rounded-full object-cover" />
                 ) : (
