@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { useEffect } from 'react'
+import { Toaster } from 'react-hot-toast'
 import ThemeProvider from './context/ThemeContext'
 import AuthProvider from './context/AuthContext'
 import Layout from './components/Layout'
@@ -18,9 +19,13 @@ import RegisterPage from './pages/RegisterPage'
 import UserDashboardPage from './pages/UserDashboardPage'
 import AdminDashboardPage from './pages/AdminDashboardPage'
 import SuperAdminDashboardPage from './pages/SuperAdminDashboardPage'
+import ShelterAdminDashboardPage from './pages/ShelterAdminDashboardPage'
 import FavoritesPage from './pages/FavoritesPage'
 import AdoptionHistoryPage from './pages/AdoptionHistoryPage'
 import ChatPage from './pages/ChatPage'
+import ForgotPasswordPage from './pages/ForgotPasswordPage'
+import ResetPasswordPage from './pages/ResetPasswordPage'
+import DonasiPage from './pages/DonasiPage'
 import NotFoundPage from './pages/NotFoundPage'
 
 export default function App() {
@@ -32,6 +37,7 @@ export default function App() {
 
   return (
     <ThemeProvider>
+      <Toaster position="top-right" />
       <AuthProvider>
         <Router>
           <Routes>
@@ -43,8 +49,12 @@ export default function App() {
               <Route path="/shelter/:id" element={<ShelterDetailPage />} />
               <Route path="/artikel" element={<ArticlePage />} />
               <Route path="/artikel/:id" element={<ArticleDetailPage />} />
+              <Route path="/donasi" element={<DonasiPage />} />
+              
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
               
               {/* Protected Routes */}
               <Route path="/dashboard" element={<ProtectedRoute><UserDashboardPage /></ProtectedRoute>} />
@@ -52,10 +62,11 @@ export default function App() {
               <Route path="/riwayat-adopsi" element={<ProtectedRoute><AdoptionHistoryPage /></ProtectedRoute>} />
               <Route path="/chat" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
               
-              {/* Admin Routes */}
-              <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminDashboardPage /></ProtectedRoute>} />
-              
+              {/* Shelter Admin Routes */}
+              <Route path="/mitra-dashboard" element={<ProtectedRoute requiredRole="admin_shelter"><ShelterAdminDashboardPage /></ProtectedRoute>} />
+
               {/* Super Admin Routes */}
+              <Route path="/admin" element={<ProtectedRoute requiredRole="superadmin"><AdminDashboardPage /></ProtectedRoute>} />
               <Route path="/superadmin" element={<ProtectedRoute requiredRole="superadmin"><SuperAdminDashboardPage /></ProtectedRoute>} />
               
               <Route path="*" element={<NotFoundPage />} />

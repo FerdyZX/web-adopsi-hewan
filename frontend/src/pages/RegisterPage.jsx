@@ -41,7 +41,7 @@ export default function RegisterPage() {
         phone: formData.phone,
         address: formData.address,
       })
-      navigate('/login')
+      navigate('/login', { state: { message: 'Akun berhasil dibuat. Silakan masuk secara manual.' } })
     } catch (err) {
       setError(err.message)
     } finally {

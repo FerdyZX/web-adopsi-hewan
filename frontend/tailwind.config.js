@@ -8,6 +8,16 @@ export default {
   theme: {
     extend: {
       colors: {
+        brand: {
+          yellow: '#FFC800',
+          orange: '#FF8A00',
+          pink: '#FF4D6D',
+          red: '#D90429',
+          green: '#20BF55',
+          teal: '#01BAEF',
+          blue: '#2B59C3',
+          purple: '#8338EC',
+        },
         primary: {
           50: '#f0fdf4',
           100: '#dcfce7',
@@ -31,7 +41,11 @@ export default {
           700: '#374151',
           800: '#1f2937',
           900: '#111827',
+          950: '#0a0f18',
         }
+      },
+      fontFamily: {
+        sans: ['Inter', 'sans-serif'],
       },
       spacing: {
         'safe-top': 'env(safe-area-inset-top)',
@@ -43,10 +57,12 @@ export default {
         'xl': '1rem',
         '2xl': '1.5rem',
         '3xl': '2rem',
+        '4xl': '3rem',
       },
       animation: {
         'fadeIn': 'fadeIn 0.5s ease-in-out',
         'slideUp': 'slideUp 0.5s ease-out',
+        'bounce-slow': 'bounce 3s infinite',
       },
       keyframes: {
         fadeIn: {

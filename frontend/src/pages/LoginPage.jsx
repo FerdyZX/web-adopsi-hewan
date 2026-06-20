@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 
 export default function LoginPage() {
@@ -10,6 +10,8 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const { login } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+  const successMessage = location.state?.message
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -41,6 +43,12 @@ export default function LoginPage() {
           </div>
         )}
 
+        {successMessage && (
+          <div className="mb-4 p-4 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-100 rounded-lg">
+            {successMessage}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium mb-2">Email</label>
@@ -66,6 +74,12 @@ export default function LoginPage() {
             />
           </div>
 
+          <div className="text-right">
+            <Link to="/forgot-password" className="text-sm text-brand-orange hover:text-brand-yellow font-medium smooth-transition">
+              Lupa password?
+            </Link>
+          </div>
+
           <button
             type="submit"
             disabled={loading}
@@ -77,7 +91,7 @@ export default function LoginPage() {
 
         <p className="mt-6 text-center text-gray-600 dark:text-gray-400">
           Belum punya akun?{' '}
-          <Link to="/register" className="text-green-500 hover:text-green-600 font-semibold">
+          <Link to="/register" className="text-brand-orange hover:text-brand-yellow font-semibold smooth-transition">
             Daftar di sini
           </Link>
         </p>

@@ -2,54 +2,42 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { supabase } from '../utils/supabaseClient'
 import { toast } from 'react-hot-toast'
+import { useAuth } from '../context/AuthContext'
 
-export default function AdminDashboardPage() {
+export default function ShelterAdminDashboardPage() {
+  const { shelterId, user } = useAuth()
   const [activeMenu, setActiveMenu] = useState('overview')
   const [loading, setLoading] = useState(true)
   
   // Real States from Supabase
   const [animals, setAnimals] = useState([])
   const [categories, setCategories] = useState([])
-  const [users, setUsers] = useState([])
-  const [articles, setArticles] = useState([])
   const [adoptions, setAdoptions] = useState([])
-  const [shelters, setShelters] = useState([])
-  const [bannerPreview, setBannerPreview] = useState(null)
 
   // Modals Visibility & Editing states
   const [showAddModal, setShowAddModal] = useState(false)
   const [editingAnimal, setEditingAnimal] = useState(null)
 
-  const [showCatModal, setShowCatModal] = useState(false)
-  const [editingCat, setEditingCat] = useState(null)
-
-  const [showUserModal, setShowUserModal] = useState(false)
-  const [editingUser, setEditingUser] = useState(null)
-
-  const [showArticleModal, setShowArticleModal] = useState(false)
-  const [editingArticle, setEditingArticle] = useState(null)
-
   const menuItems = [
-    { id: 'overview', label: 'Overview', icon: '📊' },
+    { id: 'overview', label: 'Overview Shelter', icon: '📊' },
     { id: 'animals', label: 'Kelola Hewan', icon: '🐾' },
-    { id: 'categories', label: 'Kategori', icon: '🏷️' },
-    { id: 'users', label: 'Pengguna', icon: '👥' },
-    { id: 'articles', label: 'Artikel', icon: '📰' },
     { id: 'adoptions', label: 'Verifikasi Adopsi', icon: '✅' },
-    { id: 'banners', label: 'Kelola Banner', icon: '🖼️' },
   ]
 
   const stats = [
     { label: 'Total Hewan', value: animals.length, icon: '🐾', color: 'from-brand-orange to-brand-yellow' },
-    { label: 'Total User', value: users.length, icon: '👥', color: 'from-brand-teal to-brand-blue' },
     { label: 'Total Adopsi Disetujui', value: adoptions.filter(a => a.status === 'approved').length, icon: '💝', color: 'from-brand-pink to-brand-red' },
-    { label: 'Total Shelter', value: shelters.length, icon: '🏠', color: 'from-brand-green to-brand-teal' },
+    { label: 'Menunggu Verifikasi', value: adoptions.filter(a => a.status === 'pending').length, icon: '⏳', color: 'from-brand-teal to-brand-blue' },
   ]
 
-  // --- FETCH DATA FROM SUPABASE ---
   useEffect(() => {
-    fetchData()
-  }, [])
+    if (shelterId) {
+      fetchData()
+    } else {
+      setLoading(false)
+      toast.error('Akun Anda belum terhubung dengan shelter mana pun.')
+    }
+  }, [shelterId])
 
   const fetchData = async () => {
     setLoading(true)
@@ -57,25 +45,16 @@ export default function AdminDashboardPage() {
       const [
         { data: animalsData },
         { data: catData },
-        { data: usersData },
-        { data: articlesData },
-        { data: adoptionsData },
-        { data: sheltersData }
+        { data: adoptionsData }
       ] = await Promise.all([
-        supabase.from('animals').select('*, categories(name), animal_images(id, image_url)').order('created_at', { ascending: false }),
+        supabase.from('animals').select('*, categories(name), animal_images(id, image_url)').eq('shelter_id', shelterId).order('created_at', { ascending: false }),
         supabase.from('categories').select('*').order('id', { ascending: true }),
-        supabase.from('users').select('*').order('created_at', { ascending: false }),
-        supabase.from('articles').select('*').order('created_at', { ascending: false }),
-        supabase.from('adoptions').select('*, users(name, email), animals(name)').order('created_at', { ascending: false }),
-        supabase.from('shelters').select('*')
+        supabase.from('adoptions').select('*, users(name, email), animals(name)').eq('shelter_id', shelterId).order('created_at', { ascending: false })
       ])
 
       if (animalsData) setAnimals(animalsData)
       if (catData) setCategories(catData)
-      if (usersData) setUsers(usersData)
-      if (articlesData) setArticles(articlesData)
       if (adoptionsData) setAdoptions(adoptionsData)
-      if (sheltersData) setShelters(sheltersData)
     } catch (error) {
       console.error('Error fetching data:', error)
     } finally {
@@ -105,7 +84,6 @@ export default function AdminDashboardPage() {
     return publicUrl
   }
 
-  // --- DELETE HANDLERS ---
   const handleDeleteAnimal = async (id) => {
     if (confirm('Yakin ingin menghapus hewan ini?')) {
       await supabase.from('animals').delete().eq('id', id)
@@ -113,20 +91,7 @@ export default function AdminDashboardPage() {
       fetchData()
     }
   }
-  const handleDeleteCategory = async (id) => {
-    if (confirm('Yakin ingin menghapus kategori ini?')) {
-      await supabase.from('categories').delete().eq('id', id)
-      toast.success("Kategori berhasil dihapus!")
-      fetchData()
-    }
-  }
-  const handleDeleteArticle = async (id) => {
-    if (confirm('Yakin ingin menghapus artikel ini?')) {
-      await supabase.from('articles').delete().eq('id', id)
-      toast.success("Artikel berhasil dihapus!")
-      fetchData()
-    }
-  }
+
   const handleUpdateAdoption = async (id, status) => {
     if (confirm(`Yakin ingin ${status === 'approved' ? 'menyetujui' : 'menolak'} adopsi ini?`)) {
       await supabase.from('adoptions').update({ status }).eq('id', id)
@@ -135,7 +100,6 @@ export default function AdminDashboardPage() {
     }
   }
 
-  // --- SAVE HANDLERS ---
   const handleSaveAnimal = async (e) => {
     e.preventDefault()
     const formData = new FormData(e.target)
@@ -152,7 +116,7 @@ export default function AdminDashboardPage() {
         health_status: formData.get('health_status'),
         vaccinated: formData.get('vaccinated') === 'true',
         status: 'available',
-        shelter_id: formData.get('shelter_id') ? formData.get('shelter_id') : null,
+        shelter_id: shelterId, // Automatis assign ke shelter admin yang login
       }
 
       let animalId = editingAnimal?.id
@@ -165,7 +129,6 @@ export default function AdminDashboardPage() {
         animalId = data.id
       }
 
-      // Upload Foto jika ada
       const file = e.target.querySelector('input[type="file"]').files[0]
       if (file && animalId) {
         const imageUrl = await handleFileUpload(file, 'animal-images')
@@ -192,9 +155,7 @@ export default function AdminDashboardPage() {
       const { error } = await supabase.from('animal_images').delete().eq('id', imageId)
       if (!error) {
         toast.success("Foto berhasil dihapus!")
-        // Update local state so UI updates without full refetch immediately, or just refetch
         fetchData()
-        // Remove from editingAnimal state so modal updates instantly
         setEditingAnimal(prev => ({
           ...prev,
           animal_images: prev.animal_images.filter(img => img.id !== imageId)
@@ -205,111 +166,69 @@ export default function AdminDashboardPage() {
     }
   }
 
-  const handleSaveCategory = async (e) => {
-    e.preventDefault()
-    const formData = new FormData(e.target)
-    
-    const catData = {
-      name: formData.get('name'),
-      icon: formData.get('icon'),
-    }
-
-    try {
-      if (editingCat) {
-        await supabase.from('categories').update(catData).eq('id', editingCat.id)
-      } else {
-        await supabase.from('categories').insert([catData])
-      }
-      setShowCatModal(false)
-      setEditingCat(null)
-      fetchData()
-      toast.success("Kategori berhasil disimpan!")
-    } catch (err) {
-      toast.error("Error saving category: " + err.message)
-    }
-  }
-
-  const handleSaveUser = async (e) => {
-    e.preventDefault()
-    const formData = new FormData(e.target)
-    
-    try {
-      if (editingUser) {
-        const { error } = await supabase.from('users').update({ role: formData.get('role') }).eq('id', editingUser.id)
-        if (error) throw error
-      }
-      setShowUserModal(false)
-      setEditingUser(null)
-      fetchData()
-      toast.success("Role pengguna berhasil diperbarui!")
-    } catch (err) {
-      toast.error("Error saving user: " + err.message)
-    }
-  }
-
-  const handleSaveArticle = async (e) => {
-    e.preventDefault()
-    const formData = new FormData(e.target)
-    
-    try {
-      let thumbnailUrl = editingArticle?.thumbnail_url
-      const file = e.target.querySelector('input[type="file"]').files[0]
-      if (file) {
-        thumbnailUrl = await handleFileUpload(file, 'article-thumbnails')
-      }
-
-      const articleData = {
-        title: formData.get('title'),
-        category: formData.get('category'),
-        content: formData.get('content'),
-        excerpt: formData.get('content').substring(0, 100) + '...',
-        thumbnail_url: thumbnailUrl,
-      }
-
-      if (editingArticle) {
-        await supabase.from('articles').update(articleData).eq('id', editingArticle.id)
-      } else {
-        await supabase.from('articles').insert([articleData])
-      }
-      
-      setShowArticleModal(false)
-      setEditingArticle(null)
-      fetchData()
-      toast.success("Artikel berhasil disimpan!")
-    } catch (err) {
-      toast.error("Error saving article: " + err.message)
-    }
-  }
-
-  const handleBannerUpload = async (e) => {
-    const file = e.target.files[0]
-    if (!file) return
-
-    setBannerPreview(URL.createObjectURL(file))
-    
-    try {
-      // Upload to storage
-      const imageUrl = await handleFileUpload(file, 'animal-images')
-      if (!imageUrl) return
-      
-      // Save to settings table
-      const { error } = await supabase
-        .from('settings')
-        .upsert({ key: 'hero_banner', value: { url: imageUrl } }, { onConflict: 'key' })
-        
-      if (error) throw error
-      
-      toast.success("Banner berhasil disimpan permanen ke Supabase!")
-    } catch (err) {
-      console.error("Gagal menyimpan banner:", err)
-      toast.error("Gagal menyimpan banner: " + err.message)
-    }
-  }
-
   const inputClass = "w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-dark-600 bg-gray-50 dark:bg-dark-700 outline-none focus:ring-2 focus:ring-brand-orange"
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-dark-900 text-gray-500">Memuat data dari Supabase...</div>
+  }
+
+  if (!shelterId) {
+    const handleRegisterShelter = async (e) => {
+      e.preventDefault()
+      const formData = new FormData(e.target)
+      try {
+        const { error } = await supabase.from('shelters').insert([{
+          admin_id: user?.id,
+          name: formData.get('name'),
+          address: formData.get('address'),
+          city: formData.get('city'),
+          phone: formData.get('phone')
+        }])
+        
+        if (error) throw error
+        
+        toast.success("Shelter berhasil didaftarkan! Halaman akan dimuat ulang.")
+        setTimeout(() => window.location.reload(), 1500)
+      } catch (err) {
+        toast.error("Gagal mendaftarkan shelter: " + err.message)
+      }
+    }
+
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-dark-900 p-4">
+        <div className="bg-white dark:bg-dark-800 p-8 rounded-3xl shadow-2xl w-full max-w-xl border border-gray-100 dark:border-dark-700">
+          <div className="text-center mb-8">
+            <div className="text-6xl mb-4">🏠</div>
+            <h2 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">Selamat Datang, Mitra!</h2>
+            <p className="text-gray-500 dark:text-gray-400">Akun Anda telah disetujui sebagai Admin Shelter. Silakan lengkapi profil shelter Anda di bawah ini untuk mulai menggunakan dashboard.</p>
+          </div>
+
+          <form onSubmit={handleRegisterShelter} className="space-y-5">
+            <div>
+              <label className="block text-sm font-semibold mb-1.5 text-gray-700 dark:text-gray-300">Nama Shelter</label>
+              <input name="name" className={inputClass} placeholder="Contoh: Shelter Peduli Kucing" required />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold mb-1.5 text-gray-700 dark:text-gray-300">Alamat Lengkap</label>
+              <textarea name="address" className={inputClass} rows="3" placeholder="Alamat lengkap shelter Anda..." required></textarea>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold mb-1.5 text-gray-700 dark:text-gray-300">Kota</label>
+                <input name="city" className={inputClass} placeholder="Contoh: Jakarta" required />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-1.5 text-gray-700 dark:text-gray-300">Nomor Telepon</label>
+                <input name="phone" type="tel" className={inputClass} placeholder="0812..." required />
+              </div>
+            </div>
+            <button type="submit" className="w-full py-3.5 bg-brand-orange text-white rounded-xl font-bold hover:bg-brand-yellow shadow-lg smooth-transition mt-4">
+              Daftarkan Shelter Sekarang 🚀
+            </button>
+          </form>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -318,8 +237,8 @@ export default function AdminDashboardPage() {
       <aside className="w-64 bg-white dark:bg-dark-900 text-gray-800 dark:text-white min-h-[calc(100vh-4rem)] border-r border-gray-100 dark:border-dark-700 sticky top-16 hidden lg:block">
         <div className="p-6 border-b border-gray-100 dark:border-dark-700">
           <h2 className="text-xl font-bold flex items-center gap-2">
-            <span className="w-8 h-8 bg-brand-orange rounded-lg flex items-center justify-center text-sm">🛡️</span>
-            Admin Panel
+            <span className="w-8 h-8 bg-brand-orange rounded-lg flex items-center justify-center text-sm">🏠</span>
+            Mitra Panel
           </h2>
         </div>
         <nav className="p-4 space-y-1">
@@ -356,15 +275,14 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Main Content */}
       <main className="flex-1 p-6 lg:p-8 bg-gray-50 dark:bg-dark-900">
         <motion.div key={activeMenu} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
 
           {/* OVERVIEW */}
           {activeMenu === 'overview' && (
             <>
-              <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-8">Dashboard Overview</h1>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-8">Dashboard Mitra Shelter</h1>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
                 {stats.map((stat, i) => (
                   <div key={i} className={`bg-gradient-to-br ${stat.color} rounded-2xl p-6 text-white shadow-xl`}>
                     <div className="text-3xl mb-2">{stat.icon}</div>
@@ -374,9 +292,8 @@ export default function AdminDashboardPage() {
                 ))}
               </div>
 
-              {/* Recent Adoptions */}
               <div className="bg-white dark:bg-dark-800 rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-dark-700">
-                <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Pengajuan Adopsi Terbaru</h2>
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Pengajuan Adopsi Terbaru (Menunggu)</h2>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
@@ -388,7 +305,7 @@ export default function AdminDashboardPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {adoptions.slice(0, 5).map(item => (
+                      {adoptions.filter(a => a.status === 'pending').slice(0, 5).map(item => (
                         <tr key={item.id} className="border-b border-gray-100 dark:border-dark-700">
                           <td className="py-3 px-4">
                             <div className="font-semibold text-gray-800 dark:text-white">{item.users?.name || 'Unknown'}</div>
@@ -397,9 +314,7 @@ export default function AdminDashboardPage() {
                           <td className="py-3 px-4 text-gray-700 dark:text-gray-300">{item.animals?.name}</td>
                           <td className="py-3 px-4 text-gray-500">{new Date(item.created_at).toLocaleDateString('id-ID')}</td>
                           <td className="py-3 px-4">
-                            {item.status === 'pending' && <span className="px-2 py-1 rounded-full text-xs font-bold bg-yellow-100 text-yellow-700">⏳ Menunggu</span>}
-                            {item.status === 'approved' && <span className="px-2 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700">✅ Disetujui</span>}
-                            {item.status === 'rejected' && <span className="px-2 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700">❌ Ditolak</span>}
+                            <span className="px-2 py-1 rounded-full text-xs font-bold bg-yellow-100 text-yellow-700">⏳ Menunggu</span>
                           </td>
                         </tr>
                       ))}
@@ -414,7 +329,7 @@ export default function AdminDashboardPage() {
           {activeMenu === 'animals' && (
             <>
               <div className="flex justify-between items-center mb-8">
-                <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Kelola Hewan</h1>
+                <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Kelola Hewan Saya</h1>
                 <button
                   onClick={() => setShowAddModal(true)}
                   className="px-6 py-3 bg-brand-orange text-white rounded-xl font-bold hover:bg-brand-yellow smooth-transition shadow-lg flex items-center gap-2"
@@ -472,106 +387,14 @@ export default function AdminDashboardPage() {
             </>
           )}
 
-          {/* KATEGORI */}
-          {activeMenu === 'categories' && (
-            <>
-              <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-8">Kelola Kategori</h1>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {categories.map(cat => (
-                  <div key={cat.id} className="bg-white dark:bg-dark-800 rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-dark-700 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className={`w-12 h-12 rounded-xl bg-brand-orange/20 text-brand-orange flex items-center justify-center text-2xl`}>{cat.icon || '🐾'}</div>
-                      <div>
-                        <h3 className="font-bold text-gray-800 dark:text-white">{cat.name}</h3>
-                        <p className="text-xs text-gray-500">{animals.filter(a => a.category_id === cat.id).length} hewan</p>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <button onClick={() => setEditingCat(cat)} className="p-2 rounded-lg bg-blue-50 text-blue-500 hover:bg-blue-100 text-xs">✏️</button>
-                      <button onClick={() => handleDeleteCategory(cat.id)} className="p-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 text-xs">🗑️</button>
-                    </div>
-                  </div>
-                ))}
-                <button onClick={() => setShowCatModal(true)} className="bg-gray-100 dark:bg-dark-700 rounded-2xl p-6 border-2 border-dashed border-gray-300 dark:border-dark-600 flex items-center justify-center gap-2 text-gray-500 hover:text-brand-orange hover:border-brand-orange smooth-transition font-semibold">
-                  ➕ Tambah Kategori
-                </button>
-              </div>
-            </>
-          )}
-
-          {/* PENGGUNA */}
-          {activeMenu === 'users' && (
-            <>
-              <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-8">Kelola Pengguna</h1>
-              <div className="bg-white dark:bg-dark-800 rounded-2xl shadow-lg border border-gray-100 dark:border-dark-700 overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-gray-50 dark:bg-dark-700">
-                      <tr>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-500">Nama</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-500">Email</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-500">Role</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-500">Bergabung</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-500">Aksi</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {users.map(u => (
-                        <tr key={u.id} className="border-b border-gray-100 dark:border-dark-700">
-                          <td className="py-3 px-4 font-semibold text-gray-800 dark:text-white">{u.name}</td>
-                          <td className="py-3 px-4 text-gray-500">{u.email}</td>
-                          <td className="py-3 px-4">
-                            <span className={`px-2 py-1 rounded-full text-xs font-bold capitalize ${
-                              u.role === 'admin_shelter' ? 'bg-purple-100 text-purple-600' : 
-                              u.role === 'superadmin' ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-600'
-                            }`}>{u.role}</span>
-                          </td>
-                          <td className="py-3 px-4 text-gray-500">{new Date(u.created_at).toLocaleDateString('id-ID')}</td>
-                          <td className="py-3 px-4">
-                            <button onClick={() => setEditingUser(u)} className="px-3 py-1 rounded-lg bg-blue-500 text-white text-xs font-bold hover:bg-blue-600">Edit Role</button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* ARTIKEL */}
-          {activeMenu === 'articles' && (
-            <>
-              <div className="flex justify-between items-center mb-8">
-                <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Kelola Artikel</h1>
-                <button onClick={() => setShowArticleModal(true)} className="px-6 py-3 bg-brand-orange text-white rounded-xl font-bold hover:bg-brand-yellow smooth-transition shadow-lg flex items-center gap-2">
-                  ➕ Tulis Artikel
-                </button>
-              </div>
-              <div className="space-y-4">
-                {articles.map(article => (
-                  <div key={article.id} className="bg-white dark:bg-dark-800 rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-dark-700 flex items-center gap-6">
-                    <img src={article.thumbnail_url || 'https://images.unsplash.com/photo-1552728089-57168db284ee'} alt={article.title} className="w-24 h-16 rounded-xl object-cover" />
-                    <div className="flex-1">
-                      <h3 className="font-bold text-gray-800 dark:text-white">{article.title}</h3>
-                      <p className="text-xs text-gray-500">{article.category} · {article.views_count} views</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <button onClick={() => setEditingArticle(article)} className="px-3 py-1 rounded-lg bg-blue-500 text-white text-xs font-bold">Edit</button>
-                      <button onClick={() => handleDeleteArticle(article.id)} className="px-3 py-1 rounded-lg bg-red-500 text-white text-xs font-bold">Hapus</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-
           {/* VERIFIKASI ADOPSI */}
           {activeMenu === 'adoptions' && (
             <>
               <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-8">Verifikasi Pengajuan Adopsi</h1>
               <div className="space-y-4">
-                {adoptions.map((item, i) => (
+                {adoptions.length === 0 ? (
+                   <div className="text-gray-500">Belum ada pengajuan adopsi untuk shelter Anda.</div>
+                ) : adoptions.map((item, i) => (
                   <motion.div
                     key={item.id}
                     initial={{ opacity: 0, x: -20 }}
@@ -604,32 +427,8 @@ export default function AdminDashboardPage() {
             </>
           )}
 
-          {/* KELOLA BANNER */}
-          {activeMenu === 'banners' && (
-            <>
-              <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-8">Kelola Banner</h1>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-white dark:bg-dark-800 rounded-2xl overflow-hidden shadow-lg border border-gray-100 dark:border-dark-700">
-                  <div className="h-40 vibrant-hero flex items-center justify-center relative">
-                    {bannerPreview && <img src={bannerPreview} alt="Preview" className="absolute inset-0 w-full h-full object-cover z-0" />}
-                    <span className="text-white text-xl font-bold drop-shadow-md relative z-10">Banner Utama (Hero)</span>
-                  </div>
-                  <div className="p-4 flex justify-between items-center relative">
-                    <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Hero Section Banner</span>
-                    <div className="relative overflow-hidden inline-block cursor-pointer">
-                      <button className="px-3 py-1 rounded-lg bg-blue-500 text-white text-xs font-bold pointer-events-none">Ubah Banner</button>
-                      <input type="file" onChange={handleBannerUpload} className="absolute inset-0 opacity-0 cursor-pointer" title="Ubah Banner" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-
         </motion.div>
       </main>
-
-      {/* --- MODALS --- */}
 
       {/* Add/Edit Animal Modal */}
       {(showAddModal || editingAnimal) && (
@@ -653,13 +452,6 @@ export default function AdminDashboardPage() {
                   <label className="block text-sm font-semibold mb-1.5">Ras</label>
                   <input name="breed" defaultValue={editingAnimal?.breed} className={inputClass} />
                 </div>
-              </div>
-              <div>
-                <label className="block text-sm font-semibold mb-1.5">Pilih Shelter (Lokasi)</label>
-                <select name="shelter_id" defaultValue={editingAnimal?.shelter_id || ''} className={inputClass} required>
-                  <option value="" disabled>-- Pilih Shelter --</option>
-                  {shelters.map(s => <option key={s.id} value={s.id}>{s.name} ({s.city})</option>)}
-                </select>
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div>
@@ -718,87 +510,6 @@ export default function AdminDashboardPage() {
               <div className="flex gap-3 pt-4">
                 <button type="button" onClick={() => {setShowAddModal(false); setEditingAnimal(null)}} className="flex-1 py-3 bg-gray-200 dark:bg-dark-700 rounded-xl font-bold text-gray-700 dark:text-white">Batal</button>
                 <button type="submit" className="flex-1 py-3 bg-brand-orange text-white rounded-xl font-bold shadow-lg">💾 Simpan</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Category Modal */}
-      {(showCatModal || editingCat) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => {setShowCatModal(false); setEditingCat(null)}}></div>
-          <div className="relative bg-white dark:bg-dark-800 rounded-3xl p-8 w-full max-w-sm z-10">
-            <h2 className="text-2xl font-bold mb-6">{editingCat ? 'Edit Kategori' : 'Tambah Kategori'}</h2>
-            <form onSubmit={handleSaveCategory} className="space-y-4">
-              <div>
-                <label className="block mb-1.5 font-semibold">Nama Kategori</label>
-                <input name="name" defaultValue={editingCat?.name} className={inputClass} required />
-              </div>
-              <div>
-                <label className="block mb-1.5 font-semibold">Ikon (Emoji)</label>
-                <input name="icon" defaultValue={editingCat?.icon} className={inputClass} required />
-              </div>
-              <div className="flex gap-3 mt-6">
-                <button type="button" onClick={() => {setShowCatModal(false); setEditingCat(null)}} className="flex-1 py-2 bg-gray-200 dark:bg-dark-700 rounded-xl font-bold">Batal</button>
-                <button type="submit" className="flex-1 py-2 bg-brand-orange text-white rounded-xl font-bold">Simpan</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* User Role Modal */}
-      {editingUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setEditingUser(null)}></div>
-          <div className="relative bg-white dark:bg-dark-800 rounded-3xl p-8 w-full max-w-sm z-10">
-            <h2 className="text-2xl font-bold mb-6">Edit Role Pengguna</h2>
-            <form onSubmit={handleSaveUser} className="space-y-4">
-              <p>Pengguna: <strong>{editingUser.name}</strong></p>
-              <div>
-                <label className="block mb-1.5 font-semibold">Role Baru</label>
-                <select name="role" defaultValue={editingUser.role} className={inputClass}>
-                  <option value="user">User</option>
-                  <option value="admin_shelter">Admin Shelter</option>
-                  <option value="superadmin">Super Admin</option>
-                </select>
-              </div>
-              <div className="flex gap-3 mt-6">
-                <button type="button" onClick={() => setEditingUser(null)} className="flex-1 py-2 bg-gray-200 dark:bg-dark-700 rounded-xl font-bold">Batal</button>
-                <button type="submit" className="flex-1 py-2 bg-brand-orange text-white rounded-xl font-bold">Simpan</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Article Modal */}
-      {(showArticleModal || editingArticle) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => {setShowArticleModal(false); setEditingArticle(null)}}></div>
-          <div className="relative bg-white dark:bg-dark-800 rounded-3xl p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto z-10">
-            <h2 className="text-2xl font-bold mb-6">{editingArticle ? 'Edit Artikel' : 'Tulis Artikel Baru'}</h2>
-            <form onSubmit={handleSaveArticle} className="space-y-4">
-              <div>
-                <label className="block mb-1.5 font-semibold">Judul</label>
-                <input name="title" defaultValue={editingArticle?.title} className={inputClass} required />
-              </div>
-              <div>
-                <label className="block mb-1.5 font-semibold">Kategori</label>
-                <input name="category" defaultValue={editingArticle?.category} className={inputClass} required />
-              </div>
-              <div>
-                <label className="block mb-1.5 font-semibold">Konten / Ringkasan</label>
-                <textarea name="content" defaultValue={editingArticle?.content || editingArticle?.excerpt} rows={4} className={inputClass} required />
-              </div>
-              <div>
-                <label className="block mb-1.5 font-semibold">Upload Thumbnail (Opsional)</label>
-                <input type="file" accept="image/*" className={inputClass} />
-              </div>
-              <div className="flex gap-3 pt-4">
-                <button type="button" onClick={() => {setShowArticleModal(false); setEditingArticle(null)}} className="flex-1 py-3 bg-gray-200 dark:bg-dark-700 rounded-xl font-bold text-gray-700 dark:text-white">Batal</button>
-                <button type="submit" className="flex-1 py-3 bg-brand-orange text-white rounded-xl font-bold shadow-lg">💾 Simpan Artikel</button>
               </div>
             </form>
           </div>

@@ -1,5 +1,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 * {
   @apply m-0 p-0 box-border;
 }
@@ -9,7 +13,7 @@ html {
 }
 
 body {
-  @apply font-inter bg-white dark:bg-dark-900 text-gray-900 dark:text-white transition-colors duration-300;
+  @apply bg-white dark:bg-dark-900 text-gray-900 dark:text-white transition-colors duration-300;
   font-family: 'Inter', sans-serif;
 }
 
@@ -65,10 +69,19 @@ html.dark {
 
 /* Gradient Text */
 .gradient-text {
-  @apply bg-gradient-to-r from-green-500 to-blue-500 bg-clip-text text-transparent;
+  @apply bg-gradient-to-r from-brand-orange to-brand-pink bg-clip-text text-transparent;
 }
 
 /* Smooth Transitions */
 .smooth-transition {
   @apply transition-all duration-300 ease-out;
+}
+
+/* Vibrant Hero Background */
+.vibrant-hero {
+  @apply bg-gradient-to-br from-brand-yellow to-brand-orange text-white;
+}
+
+.dark .vibrant-hero {
+  @apply bg-gradient-to-br from-brand-orange to-brand-red text-white;
 }

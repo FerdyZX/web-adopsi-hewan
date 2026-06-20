@@ -1,16 +1,29 @@
 import { Link, useNavigate } from 'react-router-dom'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTheme } from '../context/ThemeContext'
 import { useAuth } from '../context/AuthContext'
 import { useTranslation } from 'react-i18next'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 
-export default function Navbar() {
+export default function Navbar({ isTransparent = true }) {
   const { isDark, toggleTheme } = useTheme()
-  const { user, logout, isAdmin, isSuperAdmin } = useAuth()
+  const { user, logout, isShelterAdmin, isSuperAdmin } = useAuth()
   const { t } = useTranslation()
   const navigate = useNavigate()
   const [isOpen, setIsOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20)
+    }
+    // Set initial state based on current scroll position
+    handleScroll()
+    
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
 
   const handleLogout = async () => {
     try {
@@ -26,18 +39,33 @@ export default function Navbar() {
     { label: t('nav.animals'), href: '/hewan' },
     { label: t('nav.shelters'), href: '/shelter' },
     { label: t('nav.articles'), href: '/artikel' },
+    { label: 'Donasi', href: '/donasi' },
   ]
 
+  // Dynamic styling logic
+  const useLightText = isDark || (isTransparent && !scrolled)
+  
+  const navBgClass = (isTransparent && !scrolled)
+    ? 'bg-transparent'
+    : 'bg-white/90 dark:bg-dark-900/95 backdrop-blur-md shadow-sm dark:shadow-xl'
+
+  const textPrimary = useLightText ? 'text-white' : 'text-gray-800'
+  const textSecondary = useLightText ? 'text-white/90' : 'text-gray-600'
+  const textHover = useLightText ? 'hover:text-brand-yellow' : 'hover:text-brand-orange'
+  const iconBtnBg = useLightText 
+    ? 'bg-white/10 hover:bg-white/20 text-white' 
+    : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+
   return (
-    <nav className="sticky top-0 z-50 glass soft-shadow">
+    <nav className={`fixed w-full top-0 left-0 z-50 transition-all duration-300 ${navBgClass}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-brand-pink rounded-lg flex items-center justify-center shadow-sm">
               <span className="text-white font-bold">🐾</span>
             </div>
-            <span className="text-xl font-bold gradient-text">AdopsiHewan</span>
+            <span className={`text-xl font-bold transition-colors drop-shadow-sm ${textPrimary}`}>AdopsiHewan</span>
           </Link>
 
           {/* Desktop Menu */}
@@ -46,7 +74,7 @@ export default function Navbar() {
               <Link
                 key={item.href}
                 to={item.href}
-                className="text-gray-600 dark:text-gray-300 hover:text-green-500 dark:hover:text-green-400 smooth-transition"
+                className={`font-medium transition-colors drop-shadow-sm ${textSecondary} ${textHover}`}
               >
                 {item.label}
               </Link>
@@ -58,7 +86,7 @@ export default function Navbar() {
             {/* Theme Toggle */}
             <button
               onClick={toggleTheme}
-              className="p-2 rounded-lg bg-gray-100 dark:bg-dark-800 hover:bg-gray-200 dark:hover:bg-dark-700 smooth-transition"
+              className={`p-2 rounded-lg transition-colors backdrop-blur-sm ${iconBtnBg}`}
             >
               {isDark ? '☀️' : '🌙'}
             </button>
@@ -68,58 +96,85 @@ export default function Navbar() {
               <>
                 <Link
                   to="/login"
-                  className="hidden sm:inline-block px-4 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-dark-800 smooth-transition"
+                  className={`hidden sm:inline-block px-4 py-2 rounded-lg transition-colors font-medium backdrop-blur-sm ${
+                    useLightText 
+                      ? 'text-white/90 hover:text-white hover:bg-white/10' 
+                      : 'text-gray-600 hover:text-brand-orange hover:bg-gray-100'
+                  }`}
                 >
                   {t('auth.login')}
                 </Link>
                 <Link
                   to="/register"
-                  className="px-4 py-2 rounded-lg bg-green-500 text-white hover:bg-green-600 smooth-transition"
+                  className="px-5 py-2 rounded-full bg-brand-pink text-white hover:bg-brand-red font-semibold shadow-md hover:shadow-lg transition-all"
                 >
                   {t('auth.register')}
                 </Link>
               </>
             ) : (
-              <div className="relative group">
-                <button className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-gray-100 dark:bg-dark-800 hover:bg-gray-200 dark:hover:bg-dark-700 smooth-transition">
-                  <span className="text-sm">{user.email}</span>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+              <div className="relative">
+                <button
+                  onClick={() => setDropdownOpen(!dropdownOpen)}
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors backdrop-blur-sm shadow-sm ${
+                    useLightText 
+                      ? 'bg-white/10 hover:bg-white/20 text-white' 
+                      : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
+                  }`}
+                >
+                  <span className="text-sm font-medium">
+                    {user?.email}
+                  </span>
+                  <svg className={`w-4 h-4 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
 
                 {/* Dropdown Menu */}
-                <div className="absolute right-0 mt-0 w-48 bg-white dark:bg-dark-800 rounded-lg shadow-lg hidden group-hover:block">
-                  <Link to="/dashboard" className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-dark-700">
-                    {t('dashboard.title')}
-                  </Link>
-                  <Link to="/favorit" className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-dark-700">
-                    {t('favorites.title')}
-                  </Link>
-                  {isAdmin && (
-                    <Link to="/admin" className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-dark-700">
-                      Admin Dashboard
-                    </Link>
+                <AnimatePresence>
+                  {dropdownOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -5 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 mt-2 w-52 bg-white dark:bg-dark-800 rounded-xl shadow-xl border border-gray-100 dark:border-dark-700 overflow-hidden z-50"
+                    >
+                      <Link to="/dashboard" onClick={() => setDropdownOpen(false)} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-dark-700 text-gray-700 dark:text-gray-300 transition-colors">
+                        <span>👤</span> {t('dashboard.title')}
+                      </Link>
+                      <Link to="/favorit" onClick={() => setDropdownOpen(false)} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-dark-700 text-gray-700 dark:text-gray-300 transition-colors">
+                        <span>❤️</span> {t('favorites.title')}
+                      </Link>
+                      <Link to="/riwayat-adopsi" onClick={() => setDropdownOpen(false)} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-dark-700 text-gray-700 dark:text-gray-300 transition-colors">
+                        <span>📋</span> Riwayat Adopsi
+                      </Link>
+                      {isShelterAdmin && (
+                        <Link to="/mitra-dashboard" onClick={() => setDropdownOpen(false)} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-dark-700 text-gray-700 dark:text-gray-300 transition-colors">
+                          <span>🏠</span> Mitra Dashboard
+                        </Link>
+                      )}
+                      {isSuperAdmin && (
+                        <Link to="/admin" onClick={() => setDropdownOpen(false)} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-dark-700 text-gray-700 dark:text-gray-300 transition-colors">
+                          <span>⚡</span> Super Admin
+                        </Link>
+                      )}
+                      <div className="border-t border-gray-100 dark:border-dark-700"></div>
+                      <button
+                        onClick={() => { handleLogout(); setDropdownOpen(false) }}
+                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 transition-colors text-left"
+                      >
+                        <span>🚪</span> {t('auth.logout')}
+                      </button>
+                    </motion.div>
                   )}
-                  {isSuperAdmin && (
-                    <Link to="/superadmin" className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-dark-700">
-                      Super Admin Dashboard
-                    </Link>
-                  )}
-                  <button
-                    onClick={handleLogout}
-                    className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-dark-700 text-red-500"
-                  >
-                    {t('auth.logout')}
-                  </button>
-                </div>
+                </AnimatePresence>
               </div>
             )}
 
             {/* Mobile Menu Toggle */}
             <button
               onClick={() => setIsOpen(!isOpen)}
-              className="md:hidden p-2 rounded-lg bg-gray-100 dark:bg-dark-800"
+              className={`md:hidden p-2 rounded-lg ${iconBtnBg}`}
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isOpen ? 'M6 18L18 6M6 6l12 12' : 'M4 6h16M4 12h16M4 18h16'} />
@@ -129,24 +184,37 @@ export default function Navbar() {
         </div>
 
         {/* Mobile Menu */}
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="md:hidden pb-4 space-y-2"
-          >
-            {menuItems.map((item) => (
-              <Link
-                key={item.href}
-                to={item.href}
-                className="block px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-800 smooth-transition"
-              >
-                {item.label}
-              </Link>
-            ))}
-          </motion.div>
-        )}
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="md:hidden overflow-hidden bg-white dark:bg-dark-900 rounded-b-2xl shadow-xl mt-2 mx-[-1rem] px-4 border-t border-gray-100 dark:border-dark-800"
+            >
+              <div className="pb-4 pt-2 space-y-2">
+                {menuItems.map((item) => (
+                  <Link
+                    key={item.href}
+                    to={item.href}
+                    onClick={() => setIsOpen(false)}
+                    className="block px-4 py-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-dark-800 hover:text-brand-orange dark:hover:text-white transition-colors font-medium"
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+                {user && (
+                  <>
+                    <div className="border-t border-gray-100 dark:border-dark-800 my-2"></div>
+                    <Link to="/dashboard" onClick={() => setIsOpen(false)} className="block px-4 py-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-dark-800 font-medium">👤 Dashboard</Link>
+                    <Link to="/favorit" onClick={() => setIsOpen(false)} className="block px-4 py-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-dark-800 font-medium">❤️ Favorit</Link>
+                    <Link to="/riwayat-adopsi" onClick={() => setIsOpen(false)} className="block px-4 py-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-dark-800 font-medium">📋 Riwayat</Link>
+                  </>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </nav>
   )
