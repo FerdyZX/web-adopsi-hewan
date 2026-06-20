@@ -4,15 +4,18 @@ import { useTheme } from '../context/ThemeContext'
 import { useAuth } from '../context/AuthContext'
 import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
+import { supabase } from '../utils/supabaseClient'
+import { toast } from 'react-hot-toast'
 
 export default function Navbar({ isTransparent = true }) {
   const { isDark, toggleTheme } = useTheme()
-  const { user, logout, isShelterAdmin, isSuperAdmin } = useAuth()
+  const { user, role, shelterId, logout, isShelterAdmin, isSuperAdmin } = useAuth()
   const { t } = useTranslation()
   const navigate = useNavigate()
   const [isOpen, setIsOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
 
   useEffect(() => {
     const handleScroll = () => {
@@ -24,6 +27,43 @@ export default function Navbar({ isTransparent = true }) {
     window.addEventListener('scroll', handleScroll)
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
+
+  // Realtime Chat Notification
+  useEffect(() => {
+    if (!user || (role !== 'user' && role !== 'admin_shelter')) return;
+
+    let channel;
+    const subscribeToChats = async () => {
+      // 1. Dapatkan daftar room ID miliknya
+      let query = supabase.from('chat_rooms').select('id');
+      if (role === 'user') query = query.eq('user_id', user.id);
+      if (role === 'admin_shelter') query = query.eq('shelter_id', shelterId || user.id);
+
+      const { data: rooms } = await query;
+      const myRoomIds = rooms?.map(r => r.id) || [];
+
+      if (myRoomIds.length === 0) return;
+
+      // 2. Listen ke semua chat_messages, filter manual
+      channel = supabase.channel('navbar-chat-notif')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, payload => {
+          const msg = payload.new;
+          if (myRoomIds.includes(msg.room_id) && msg.sender_id !== user.id) {
+            toast('💬 Ada pesan baru masuk!', {
+              style: { borderRadius: '10px', background: '#333', color: '#fff' }
+            });
+            setUnreadCount(prev => prev + 1);
+          }
+        })
+        .subscribe();
+    }
+
+    subscribeToChats();
+
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    }
+  }, [user, role, shelterId]);
 
   const handleLogout = async () => {
     try {
@@ -83,6 +123,19 @@ export default function Navbar({ isTransparent = true }) {
 
           {/* Right Side */}
           <div className="flex items-center space-x-4">
+            
+            {/* Global Chat Icon (Only for User & Shelter Admin) */}
+            {user && (role === 'user' || role === 'admin_shelter') && (
+              <Link to="/chat" className="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-700 transition">
+                <span className="text-xl">💬</span>
+                {unreadCount > 0 && (
+                  <span className="absolute top-0 right-0 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white transform translate-x-1/4 -translate-y-1/4 bg-red-600 rounded-full">
+                    {unreadCount}
+                  </span>
+                )}
+              </Link>
+            )}
+
             {/* Theme Toggle */}
             <button
               onClick={toggleTheme}

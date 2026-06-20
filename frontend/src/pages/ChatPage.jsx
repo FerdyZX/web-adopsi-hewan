@@ -76,6 +76,7 @@ export default function ChatPage() {
               partnerAvatar,
               partnerId: isUser ? room.shelters?.id : room.users?.id,
               time: new Date(room.created_at).toLocaleDateString('id-ID'),
+              updated_at: room.updated_at,
               lastMessage: 'Klik untuk melihat pesan',
               unread: 0
             }
@@ -94,6 +95,40 @@ export default function ChatPage() {
 
     fetchRooms()
   }, [user, role])
+
+  // Global Listener for Room Updates & Sorting
+  useEffect(() => {
+    if (!user || chatRooms.length === 0) return;
+    
+    const myRoomIds = chatRooms.map(r => r.id);
+
+    const globalChannel = supabase.channel('chatpage-global-notif')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, payload => {
+        const msg = payload.new;
+        if (myRoomIds.includes(msg.room_id)) {
+          setChatRooms(prevRooms => {
+            const updatedRooms = prevRooms.map(r => {
+              if (r.id === msg.room_id) {
+                return {
+                  ...r,
+                  lastMessage: msg.message,
+                  unread: (msg.sender_id !== user.id && selectedRoom?.id !== msg.room_id) ? (r.unread + 1) : r.unread,
+                  updated_at: new Date().toISOString()
+                }
+              }
+              return r;
+            });
+            // Sort by latest message
+            return updatedRooms.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+          });
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(globalChannel);
+    }
+  }, [user, chatRooms.length, selectedRoom?.id]);
 
   // Fetch Messages for selected room & Subscribe to Realtime
   useEffect(() => {
@@ -270,7 +305,10 @@ export default function ChatPage() {
               chatRooms.map((room) => (
                 <button
                   key={room.id}
-                  onClick={() => setSelectedRoom(room)}
+                  onClick={() => {
+                    setSelectedRoom(room);
+                    setChatRooms(prev => prev.map(r => r.id === room.id ? { ...r, unread: 0 } : r));
+                  }}
                   className={`w-full text-left p-4 smooth-transition ${
                     selectedRoom?.id === room.id
                       ? 'bg-brand-orange/10 dark:bg-brand-orange/20 border-l-4 border-brand-orange'
@@ -288,7 +326,14 @@ export default function ChatPage() {
                         <span className="font-semibold text-gray-800 dark:text-white text-sm truncate">{room.partnerName}</span>
                         <span className="text-xs text-gray-400">{room.time}</span>
                       </div>
-                      <p className="text-xs text-gray-500 truncate">{room.lastMessage}</p>
+                      <div className="flex justify-between items-center mt-1">
+                        <p className={`text-xs truncate ${room.unread > 0 ? 'font-bold text-gray-800 dark:text-white' : 'text-gray-500'}`}>{room.lastMessage}</p>
+                        {room.unread > 0 && (
+                          <span className="bg-brand-orange text-white text-[10px] font-bold px-2 py-0.5 rounded-full ml-2">
+                            {room.unread}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </button>
