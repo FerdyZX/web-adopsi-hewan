@@ -44,6 +44,12 @@ export default function Navbar({ isTransparent = true }) {
 
       if (myRoomIds.length === 0) return;
 
+      // 1.5 Fetch current unread messages
+      const { data: unreadMsgs } = await supabase.from('chat_messages').select('id').in('room_id', myRoomIds).eq('read', false).neq('sender_id', user.id);
+      if (unreadMsgs) {
+        setUnreadCount(unreadMsgs.length);
+      }
+
       // 2. Listen ke semua chat_messages, filter manual
       channel = supabase.channel('navbar-chat-notif')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, payload => {
@@ -64,6 +70,16 @@ export default function Navbar({ isTransparent = true }) {
       if (channel) supabase.removeChannel(channel);
     }
   }, [user, role, shelterId]);
+
+  // Listen to Custom Event from ChatPage to decrease unread count
+  useEffect(() => {
+    const handleChatRead = (e) => {
+      const readCount = e.detail?.count || 1;
+      setUnreadCount(prev => Math.max(0, prev - readCount));
+    };
+    window.addEventListener('chat_read', handleChatRead);
+    return () => window.removeEventListener('chat_read', handleChatRead);
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -129,8 +145,8 @@ export default function Navbar({ isTransparent = true }) {
               <Link to="/chat" className="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-700 transition">
                 <span className="text-xl">💬</span>
                 {unreadCount > 0 && (
-                  <span className="absolute top-0 right-0 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white transform translate-x-1/4 -translate-y-1/4 bg-red-600 rounded-full">
-                    {unreadCount}
+                  <span className="absolute top-0 right-0 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-bold leading-none text-white transform translate-x-1/4 -translate-y-1/4 bg-red-600 rounded-full">
+                    {unreadCount > 99 ? '99+' : unreadCount}
                   </span>
                 )}
               </Link>

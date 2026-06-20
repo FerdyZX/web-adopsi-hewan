@@ -50,7 +50,7 @@ export default function ChatPage() {
       setLoadingRooms(true)
       try {
         let query = supabase.from('chat_rooms').select(`
-          id, created_at,
+          id, created_at, updated_at,
           users:user_id(id, name, avatar_url),
           shelters:shelter_id(id, name, logo_url)
         `).order('updated_at', { ascending: false })
@@ -63,6 +63,9 @@ export default function ChatPage() {
 
         if (error) throw error
         if (data) {
+          const myRoomIds = data.map(r => r.id);
+          const { data: unreadMsgs } = await supabase.from('chat_messages').select('room_id').in('room_id', myRoomIds).eq('read', false).neq('sender_id', user.id);
+
           const formattedRooms = data.map(room => {
             const isUser = role === 'user'
             const partnerName = isUser ? room.shelters?.name : room.users?.name
@@ -78,7 +81,7 @@ export default function ChatPage() {
               time: new Date(room.created_at).toLocaleDateString('id-ID'),
               updated_at: room.updated_at,
               lastMessage: 'Klik untuk melihat pesan',
-              unread: 0
+              unread: unreadMsgs?.filter(m => m.room_id === room.id).length || 0
             }
           })
           setChatRooms(formattedRooms)
@@ -129,6 +132,26 @@ export default function ChatPage() {
       supabase.removeChannel(globalChannel);
     }
   }, [user, chatRooms.length, selectedRoom?.id]);
+
+  const handleSelectRoom = async (room) => {
+    setSelectedRoom(room);
+    
+    // Jika ada pesan yang belum dibaca
+    if (room.unread > 0) {
+      setChatRooms(prev => prev.map(r => r.id === room.id ? { ...r, unread: 0 } : r));
+      window.dispatchEvent(new CustomEvent('chat_read', { detail: { count: room.unread } }));
+
+      try {
+        await supabase.from('chat_messages')
+          .update({ read: true })
+          .eq('room_id', room.id)
+          .eq('read', false)
+          .neq('sender_id', user.id);
+      } catch (err) {
+        console.error("Gagal menandai pesan sebagai sudah dibaca", err);
+      }
+    }
+  };
 
   // Fetch Messages for selected room & Subscribe to Realtime
   useEffect(() => {
@@ -305,10 +328,7 @@ export default function ChatPage() {
               chatRooms.map((room) => (
                 <button
                   key={room.id}
-                  onClick={() => {
-                    setSelectedRoom(room);
-                    setChatRooms(prev => prev.map(r => r.id === room.id ? { ...r, unread: 0 } : r));
-                  }}
+                  onClick={() => handleSelectRoom(room)}
                   className={`w-full text-left p-4 smooth-transition ${
                     selectedRoom?.id === room.id
                       ? 'bg-brand-orange/10 dark:bg-brand-orange/20 border-l-4 border-brand-orange'
@@ -330,7 +350,7 @@ export default function ChatPage() {
                         <p className={`text-xs truncate ${room.unread > 0 ? 'font-bold text-gray-800 dark:text-white' : 'text-gray-500'}`}>{room.lastMessage}</p>
                         {room.unread > 0 && (
                           <span className="bg-brand-orange text-white text-[10px] font-bold px-2 py-0.5 rounded-full ml-2">
-                            {room.unread}
+                            {room.unread > 99 ? '99+' : room.unread}
                           </span>
                         )}
                       </div>
