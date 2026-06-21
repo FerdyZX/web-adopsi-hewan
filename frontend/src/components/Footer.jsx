@@ -42,10 +42,10 @@ export default function Footer() {
           <div>
             <h4 className="font-semibold mb-4">Dukungan</h4>
             <ul className="space-y-2">
-              <li><a href="#" className="text-gray-400 hover:text-white">Tentang Kami</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-white">Hubungi Kami</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-white">FAQ</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-white">Kebijakan Privasi</a></li>
+              <li><Link to="/tentang-kami" className="text-gray-400 hover:text-white">Tentang Kami</Link></li>
+              <li><Link to="/hubungi-kami" className="text-gray-400 hover:text-white">Hubungi Kami</Link></li>
+              <li><Link to="/faq" className="text-gray-400 hover:text-white">FAQ</Link></li>
+              <li><Link to="/kebijakan-privasi" className="text-gray-400 hover:text-white">Kebijakan Privasi</Link></li>
             </ul>
           </div>
 
@@ -71,7 +71,7 @@ export default function Footer() {
             <p className="text-white/80">© 2024 Adopt.Me. Semua hak dilindungi.</p>
             <div className="flex space-x-6 mt-4 md:mt-0">
               <a href="#" className="text-gray-400 hover:text-white text-sm">Syarat & Ketentuan</a>
-              <a href="#" className="text-gray-400 hover:text-white text-sm">Kebijakan Privasi</a>
+              <Link to="/kebijakan-privasi" className="text-gray-400 hover:text-white text-sm">Kebijakan Privasi</Link>
             </div>
           </div>
         </div>

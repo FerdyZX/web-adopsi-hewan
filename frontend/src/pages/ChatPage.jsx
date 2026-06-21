@@ -112,10 +112,21 @@ export default function ChatPage() {
           setChatRooms(prevRooms => {
             const updatedRooms = prevRooms.map(r => {
               if (r.id === msg.room_id) {
+                // If this is the currently open room, don't increment unread
+                const isCurrentRoom = selectedRoom?.id === msg.room_id;
+                
+                // If it is the current room, mark it read immediately in DB
+                if (isCurrentRoom && msg.sender_id !== user.id) {
+                  supabase.from('chat_messages')
+                    .update({ read: true })
+                    .eq('id', msg.id)
+                    .then(() => window.dispatchEvent(new CustomEvent('chat_read_updated')));
+                }
+
                 return {
                   ...r,
                   lastMessage: msg.message,
-                  unread: (msg.sender_id !== user.id && selectedRoom?.id !== msg.room_id) ? (r.unread + 1) : r.unread,
+                  unread: (msg.sender_id !== user.id && !isCurrentRoom) ? (r.unread + 1) : r.unread,
                   updated_at: new Date().toISOString()
                 }
               }
@@ -136,17 +147,18 @@ export default function ChatPage() {
   const handleSelectRoom = async (room) => {
     setSelectedRoom(room);
     
-    // Jika ada pesan yang belum dibaca
     if (room.unread > 0) {
       setChatRooms(prev => prev.map(r => r.id === room.id ? { ...r, unread: 0 } : r));
-      window.dispatchEvent(new CustomEvent('chat_read', { detail: { count: room.unread } }));
-
+      
       try {
         await supabase.from('chat_messages')
           .update({ read: true })
           .eq('room_id', room.id)
           .eq('read', false)
           .neq('sender_id', user.id);
+          
+        // Notify Navbar to refetch absolute count after DB is updated
+        window.dispatchEvent(new CustomEvent('chat_read_updated'));
       } catch (err) {
         console.error("Gagal menandai pesan sebagai sudah dibaca", err);
       }
@@ -216,9 +228,12 @@ export default function ChatPage() {
       }
     }
 
+    // Simpan selectedRoom id di global window agar Navbar tahu room mana yang sedang terbuka
+    window.currentChatRoomId = selectedRoom.id;
     fetchMessagesAndSubscribe()
 
     return () => {
+      window.currentChatRoomId = null;
       if (channel) supabase.removeChannel(channel)
     }
   }, [selectedRoom, user])

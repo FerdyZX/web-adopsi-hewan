@@ -26,6 +26,10 @@ import ChatPage from './pages/ChatPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import DonasiPage from './pages/DonasiPage'
+import AboutPage from './pages/AboutPage'
+import ContactPage from './pages/ContactPage'
+import FAQPage from './pages/FAQPage'
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
 import NotFoundPage from './pages/NotFoundPage'
 
 export default function App() {
@@ -50,6 +54,10 @@ export default function App() {
               <Route path="/artikel" element={<ArticlePage />} />
               <Route path="/artikel/:id" element={<ArticleDetailPage />} />
               <Route path="/donasi" element={<DonasiPage />} />
+              <Route path="/tentang-kami" element={<AboutPage />} />
+              <Route path="/hubungi-kami" element={<ContactPage />} />
+              <Route path="/faq" element={<FAQPage />} />
+              <Route path="/kebijakan-privasi" element={<PrivacyPolicyPage />} />
               
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />

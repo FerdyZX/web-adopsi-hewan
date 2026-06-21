@@ -44,24 +44,41 @@ export default function Navbar({ isTransparent = true }) {
 
       if (myRoomIds.length === 0) return;
 
-      // 1.5 Fetch current unread messages
-      const { data: unreadMsgs } = await supabase.from('chat_messages').select('id').in('room_id', myRoomIds).eq('read', false).neq('sender_id', user.id);
-      if (unreadMsgs) {
-        setUnreadCount(unreadMsgs.length);
-      }
+      // 1.5 Fetch current unread messages - extracted to function
+      const fetchUnreadCount = async () => {
+        const { data: unreadMsgs } = await supabase.from('chat_messages').select('id').in('room_id', myRoomIds).eq('read', false).neq('sender_id', user.id);
+        if (unreadMsgs) {
+          setUnreadCount(unreadMsgs.length);
+        }
+      };
+      
+      fetchUnreadCount();
+
+      // Listen to exact update requests
+      window.addEventListener('chat_read_updated', fetchUnreadCount);
 
       // 2. Listen ke semua chat_messages, filter manual
       channel = supabase.channel('navbar-chat-notif')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, payload => {
           const msg = payload.new;
           if (myRoomIds.includes(msg.room_id) && msg.sender_id !== user.id) {
-            toast('💬 Ada pesan baru masuk!', {
-              style: { borderRadius: '10px', background: '#333', color: '#fff' }
-            });
-            setUnreadCount(prev => prev + 1);
+            // Check if user is currently looking at this specific room
+            const isCurrentlyViewingRoom = window.location.pathname.startsWith('/chat') && window.currentChatRoomId === msg.room_id;
+            
+            if (!isCurrentlyViewingRoom) {
+              toast('💬 Ada pesan baru masuk!', {
+                style: { borderRadius: '10px', background: '#333', color: '#fff' }
+              });
+              setUnreadCount(prev => prev + 1);
+            }
           }
         })
         .subscribe();
+        
+      // Return cleanup function for the listener inside useEffect
+      return () => {
+        window.removeEventListener('chat_read_updated', fetchUnreadCount);
+      };
     }
 
     subscribeToChats();
@@ -71,15 +88,7 @@ export default function Navbar({ isTransparent = true }) {
     }
   }, [user, role, shelterId]);
 
-  // Listen to Custom Event from ChatPage to decrease unread count
-  useEffect(() => {
-    const handleChatRead = (e) => {
-      const readCount = e.detail?.count || 1;
-      setUnreadCount(prev => Math.max(0, prev - readCount));
-    };
-    window.addEventListener('chat_read', handleChatRead);
-    return () => window.removeEventListener('chat_read', handleChatRead);
-  }, []);
+  // Legacy event listener removed because we now use chat_read_updated in the main useEffect
 
   const handleLogout = async () => {
     try {
