@@ -46,9 +46,20 @@ export default function Navbar({ isTransparent = true }) {
 
       // 1.5 Fetch current unread messages - extracted to function
       const fetchUnreadCount = async () => {
-        const { data: unreadMsgs } = await supabase.from('chat_messages').select('id').in('room_id', myRoomIds).eq('read', false).neq('sender_id', user.id);
+        const { data: unreadMsgs } = await supabase.from('chat_messages')
+          .select('id, room_id, created_at')
+          .in('room_id', myRoomIds)
+          .eq('read', false)
+          .neq('sender_id', user.id);
+          
         if (unreadMsgs) {
-          setUnreadCount(unreadMsgs.length);
+          const localReceipts = JSON.parse(localStorage.getItem(`chat_read_receipts_${user.id}`) || '{}');
+          const actualUnread = unreadMsgs.filter(m => {
+            const roomLastRead = localReceipts[m.room_id];
+            if (roomLastRead && new Date(m.created_at) <= new Date(roomLastRead)) return false;
+            return true;
+          });
+          setUnreadCount(actualUnread.length);
         }
       };
       

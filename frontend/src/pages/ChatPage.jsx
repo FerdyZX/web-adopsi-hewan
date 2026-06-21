@@ -64,9 +64,25 @@ export default function ChatPage() {
         if (error) throw error
         if (data) {
           const myRoomIds = data.map(r => r.id);
-          const { data: unreadMsgs } = await supabase.from('chat_messages').select('room_id').in('room_id', myRoomIds).eq('read', false).neq('sender_id', user.id);
+          const { data: unreadMsgs } = await supabase.from('chat_messages')
+            .select('room_id, created_at')
+            .in('room_id', myRoomIds)
+            .eq('read', false)
+            .neq('sender_id', user.id);
+
+          const localReceipts = JSON.parse(localStorage.getItem(`chat_read_receipts_${user.id}`) || '{}');
 
           const formattedRooms = data.map(room => {
+            const roomLastRead = localReceipts[room.id];
+            let unreadCount = 0;
+            if (unreadMsgs) {
+              unreadCount = unreadMsgs.filter(m => {
+                if (m.room_id !== room.id) return false;
+                if (roomLastRead && new Date(m.created_at) <= new Date(roomLastRead)) return false;
+                return true;
+              }).length;
+            }
+
             const isUser = role === 'user'
             const partnerName = isUser ? room.shelters?.name : room.users?.name
             const partnerAvatar = isUser 
@@ -81,7 +97,7 @@ export default function ChatPage() {
               time: new Date(room.created_at).toLocaleDateString('id-ID'),
               updated_at: room.updated_at,
               lastMessage: 'Klik untuk melihat pesan',
-              unread: unreadMsgs?.filter(m => m.room_id === room.id).length || 0
+              unread: unreadCount
             }
           })
           setChatRooms(formattedRooms)
@@ -117,6 +133,10 @@ export default function ChatPage() {
                 
                 // If it is the current room, mark it read immediately in DB
                 if (isCurrentRoom && msg.sender_id !== user.id) {
+                  const localReceipts = JSON.parse(localStorage.getItem(`chat_read_receipts_${user.id}`) || '{}');
+                  localReceipts[msg.room_id] = msg.created_at;
+                  localStorage.setItem(`chat_read_receipts_${user.id}`, JSON.stringify(localReceipts));
+
                   supabase.from('chat_messages')
                     .update({ read: true })
                     .eq('id', msg.id)
@@ -146,6 +166,11 @@ export default function ChatPage() {
 
   const handleSelectRoom = async (room) => {
     setSelectedRoom(room);
+    
+    // Save to localStorage to fix RLS update block issue
+    const localReceipts = JSON.parse(localStorage.getItem(`chat_read_receipts_${user.id}`) || '{}');
+    localReceipts[room.id] = room.updated_at || new Date().toISOString();
+    localStorage.setItem(`chat_read_receipts_${user.id}`, JSON.stringify(localReceipts));
     
     if (room.unread > 0) {
       setChatRooms(prev => prev.map(r => r.id === room.id ? { ...r, unread: 0 } : r));
