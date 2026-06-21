@@ -1,4 +1,4 @@
-const CACHE_NAME = 'adopsi-hewan-v1'
+const CACHE_NAME = 'adopsi-hewan-v2'
 const urlsToCache = [
   '/',
   '/index.html',
