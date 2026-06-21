@@ -121,7 +121,7 @@ export default function Navbar({ isTransparent = true }) {
             <div className="w-8 h-8 bg-brand-pink rounded-lg flex items-center justify-center shadow-sm">
               <span className="text-white font-bold">🐾</span>
             </div>
-            <span className={`text-xl font-bold transition-colors drop-shadow-sm ${textPrimary}`}>AdopsiHewan</span>
+            <span className={`text-xl font-bold transition-colors drop-shadow-sm ${textPrimary}`}>Adopt.Me</span>
           </Link>
 
           {/* Desktop Menu */}

@@ -1,6 +1,6 @@
 {
   "name": "pwa",
-  "short_name": "AdopsiHewan",
+  "short_name": "Adopt.Me",
   "description": "Platform adopsi hewan modern",
   "start_url": "/",
   "scope": "/",

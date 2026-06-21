@@ -20,7 +20,7 @@ export default function Footer() {
               <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg">
                 <span className="text-brand-pink font-bold text-2xl">🐾</span>
               </div>
-              <span className="text-2xl font-bold text-white tracking-wide">AdopsiHewan</span>
+              <span className="text-2xl font-bold text-white tracking-wide">Adopt.Me</span>
             </Link>
             <p className="text-gray-400">
               Platform adopsi hewan yang menghubungkan shelter, komunitas pecinta hewan, dan individu yang ingin mengadopsi.
@@ -68,7 +68,7 @@ export default function Footer() {
 
         <div className="border-t border-white/20 pt-8 mt-12">
           <div className="flex flex-col md:flex-row justify-between items-center">
-            <p className="text-white/80">© 2024 AdopsiHewan. Semua hak dilindungi.</p>
+            <p className="text-white/80">© 2024 Adopt.Me. Semua hak dilindungi.</p>
             <div className="flex space-x-6 mt-4 md:mt-0">
               <a href="#" className="text-gray-400 hover:text-white text-sm">Syarat & Ketentuan</a>
               <a href="#" className="text-gray-400 hover:text-white text-sm">Kebijakan Privasi</a>
