@@ -100,6 +100,14 @@ export default function ChatPage() {
               unread: unreadCount
             }
           })
+          
+          // Sort rooms: unread first, then by updated_at descending
+          formattedRooms.sort((a, b) => {
+            if (a.unread > 0 && b.unread === 0) return -1;
+            if (b.unread > 0 && a.unread === 0) return 1;
+            return new Date(b.updated_at) - new Date(a.updated_at);
+          });
+          
           setChatRooms(formattedRooms)
           if (formattedRooms.length > 0) {
             setSelectedRoom(formattedRooms[0])
@@ -152,8 +160,12 @@ export default function ChatPage() {
               }
               return r;
             });
-            // Sort by latest message
-            return updatedRooms.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+            // Sort by unread first, then by latest message
+            return updatedRooms.sort((a, b) => {
+              if (a.unread > 0 && b.unread === 0) return -1;
+              if (b.unread > 0 && a.unread === 0) return 1;
+              return new Date(b.updated_at) - new Date(a.updated_at);
+            });
           });
         }
       })
