@@ -94,19 +94,15 @@ export default function ChatPage() {
               partnerName: partnerName || 'Unknown',
               partnerAvatar,
               partnerId: isUser ? room.shelters?.id : room.users?.id,
-              time: new Date(room.created_at).toLocaleDateString('id-ID'),
+              time: new Date(room.updated_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' ' + new Date(room.updated_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'numeric' }),
               updated_at: room.updated_at,
               lastMessage: 'Klik untuk melihat pesan',
               unread: unreadCount
             }
           })
           
-          // Sort rooms: unread first, then by updated_at descending
-          formattedRooms.sort((a, b) => {
-            if (a.unread > 0 && b.unread === 0) return -1;
-            if (b.unread > 0 && a.unread === 0) return 1;
-            return new Date(b.updated_at) - new Date(a.updated_at);
-          });
+          // Sort rooms by updated_at descending
+          formattedRooms.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
           
           setChatRooms(formattedRooms)
           if (formattedRooms.length > 0) {
@@ -151,21 +147,19 @@ export default function ChatPage() {
                     .then(() => window.dispatchEvent(new CustomEvent('chat_read_updated')));
                 }
 
+                const now = new Date();
                 return {
                   ...r,
                   lastMessage: msg.message,
                   unread: (msg.sender_id !== user.id && !isCurrentRoom) ? (r.unread + 1) : r.unread,
-                  updated_at: new Date().toISOString()
+                  updated_at: now.toISOString(),
+                  time: now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' ' + now.toLocaleDateString('id-ID', { day: 'numeric', month: 'numeric' })
                 }
               }
               return r;
             });
-            // Sort by unread first, then by latest message
-            return updatedRooms.sort((a, b) => {
-              if (a.unread > 0 && b.unread === 0) return -1;
-              if (b.unread > 0 && a.unread === 0) return 1;
-              return new Date(b.updated_at) - new Date(a.updated_at);
-            });
+            // Sort by latest message
+            return updatedRooms.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
           });
         }
       })
@@ -336,7 +330,18 @@ export default function ChatPage() {
       const { error } = await supabase.from('chat_messages').insert([newMessage])
       if (error) throw error
       
-      await supabase.from('chat_rooms').update({ updated_at: new Date() }).eq('id', selectedRoom.id)
+      // Perbarui updated_at di state lokal agar langsung naik ke atas tanpa menunggu supabase realtime channel
+      const now = new Date();
+      setChatRooms(prev => {
+        const updated = prev.map(r => r.id === selectedRoom.id ? { 
+          ...r, 
+          updated_at: now.toISOString(),
+          time: now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' ' + now.toLocaleDateString('id-ID', { day: 'numeric', month: 'numeric' })
+        } : r);
+        return updated.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+      });
+      
+      await supabase.from('chat_rooms').update({ updated_at: now.toISOString() }).eq('id', selectedRoom.id)
     } catch (err) {
       console.error("Error sending message:", err)
       alert("Gagal mengirim pesan: " + err.message)
